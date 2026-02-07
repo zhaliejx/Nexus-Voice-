@@ -3,8 +3,22 @@ export enum AppMode {
   BLUEPRINT = 'BLUEPRINT'
 }
 
-export interface AudioStreamConfig {
-  sampleRate: number;
+export type ConnectionState = 'disconnected' | 'listening' | 'processing' | 'speaking' | 'error' | 'idle' | 'sleeping';
+
+export interface Message {
+  id: string;
+  role: 'user' | 'assistant' | 'system' | 'tool';
+  content: string;
+  timestamp: number;
+  metadata?: any;
 }
 
-export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  parameters: {
+    type: string;
+    properties: Record<string, any>;
+    required?: string[];
+  };
+}

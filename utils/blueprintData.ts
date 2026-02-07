@@ -40,7 +40,7 @@ async def main_loop():
     wakeword = wake.OpenWakeWord(model="hey_nexus")
     whisper = stt.WhisperModel("tiny.en")
     gemini = llm.GeminiClient(api_key=config['GEMINI_KEY'])
-    piper = tts.PiperTTS(voice="en_US-lessac-medium")
+    piper = tts.PiperTTS(voice="en_US-amy-medium")
 
     print("Listening...")
     
