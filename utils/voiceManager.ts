@@ -1,14 +1,15 @@
 export class VoiceManager {
   private recognition: any;
   private isListening: boolean = false;
+  private isSpeaking: boolean = false; // Gate to prevent self-hearing loop
   private wakeWordCallback: (() => void) | null = null;
   private commandCallback: ((text: string) => void) | null = null;
   private synth: SpeechSynthesis;
   private wakeWords = ['nexus', 'hey nexus', 'ok nexus'];
   private selectedVoice: SpeechSynthesisVoice | null = null;
   
-  // Configuration for the Local Piper Model
-  private piperConfig = {
+  // Configuration for the requested Piper model
+  public piperConfig = {
     modelPath: '/voices/en_US-amy-medium.onnx',
     configPath: '/voices/en_US-amy-medium.onnx.json'
   };
@@ -30,44 +31,44 @@ export class VoiceManager {
     if (window.speechSynthesis.onvoiceschanged !== undefined) {
       window.speechSynthesis.onvoiceschanged = () => this.loadVoices();
     }
-    // Retry a few times in case of mobile browser delay
     setTimeout(() => this.loadVoices(), 1000);
-    setTimeout(() => this.loadVoices(), 3000);
+    setTimeout(() => this.loadVoices(), 2500);
   }
 
   private loadVoices() {
     const voices = this.synth.getVoices();
     if (voices.length > 0) {
-      // Priority List for "Amy" like voices
+      // 1. Try to find the exact requested Piper voice if installed system-wide (unlikely but possible)
+      // 2. Look for "Amy" specifically
+      // 3. Look for "Samantha" or "Zira"
+      // 4. Fallback to any Female US English voice
+      
       const preferredNames = [
+        "en_US-amy-medium",
         "Amy", 
         "Microsoft Zira", 
         "Google US English", 
         "Samantha"
       ];
 
-      // 1. Exact Match from Priority List
       this.selectedVoice = voices.find(v => preferredNames.some(name => v.name.includes(name))) || null;
 
-      // 2. Any Female US English Voice
       if (!this.selectedVoice) {
         this.selectedVoice = voices.find(v => 
-          (v.name.includes("Female") || v.name.includes("Woman")) && 
+          (v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("woman")) && 
           v.lang.startsWith("en")
         ) || null;
       }
 
-      // 3. Any US English Voice
       if (!this.selectedVoice) {
         this.selectedVoice = voices.find(v => v.lang === "en-US") || null;
       }
 
-      // 4. Fallback to first available
       if (!this.selectedVoice) {
         this.selectedVoice = voices[0];
       }
       
-      // console.log("Voice Active:", this.selectedVoice?.name);
+      // console.log("Voice selected:", this.selectedVoice?.name);
     }
   }
 
@@ -77,6 +78,9 @@ export class VoiceManager {
 
     if (this.recognition) {
       this.recognition.onresult = (event: any) => {
+        // Critical: If speaking, ignore all input
+        if (this.isSpeaking) return;
+
         const results = event.results;
         const transcript = results[results.length - 1][0].transcript.toLowerCase().trim();
         const isFinal = results[results.length - 1].isFinal;
@@ -96,7 +100,8 @@ export class VoiceManager {
       };
 
       this.recognition.onend = () => {
-        if (this.isListening) {
+        // Only restart if we are NOT speaking and supposed to be active
+        if (this.isListening && !this.isSpeaking && this.mode !== 'SLEEPING') {
           try {
             this.recognition.start();
           } catch(e) { /* ignore */ }
@@ -107,6 +112,11 @@ export class VoiceManager {
 
   setSleepMode(sleeping: boolean) {
     this.mode = sleeping ? 'SLEEPING' : 'WAITING_FOR_WAKE';
+    if (sleeping) {
+        this.stop();
+    } else {
+        this.start();
+    }
   }
 
   start() {
@@ -125,19 +135,17 @@ export class VoiceManager {
     this.synth.cancel();
   }
 
-  /**
-   * TTS Handler
-   * Note: In a full local setup, this would fetch the .onnx file from 
-   * /voices/en_US-amy-medium.onnx and process it via onnxruntime-web.
-   * Since we are in a static context without the WASM runtime configured, 
-   * this defaults to the best browser fallback found.
-   */
   speak(text: string, onEnd?: () => void) {
+    // 1. Cancel existing speech
     this.synth.cancel();
 
-    if (!this.selectedVoice) {
-        this.loadVoices(); 
+    // 2. Set Speaking Flag & Stop Mic (Prevents Feedback Loop)
+    this.isSpeaking = true;
+    if (this.recognition) {
+        try { this.recognition.stop(); } catch(e) {}
     }
+
+    if (!this.selectedVoice) this.loadVoices();
 
     const utterance = new SpeechSynthesisUtterance(text);
     
@@ -145,13 +153,28 @@ export class VoiceManager {
         utterance.voice = this.selectedVoice;
     }
 
-    // Tweak properties to sound more like Piper's Amy (Clearer, slightly fast)
+    // Tune to match "Amy" characteristics
     utterance.pitch = 1.05; 
     utterance.rate = 1.15; 
     utterance.volume = 1.0;
     
     utterance.onend = () => {
+        // 3. Reset Flag & Restart Mic
+        this.isSpeaking = false;
+        
+        if (this.isListening && this.mode !== 'SLEEPING') {
+            try { this.recognition.start(); } catch(e) {}
+        }
+
         if (onEnd) onEnd();
+    };
+
+    // Failsafe for errors
+    utterance.onerror = () => {
+        this.isSpeaking = false;
+        if (this.isListening && this.mode !== 'SLEEPING') {
+            try { this.recognition.start(); } catch(e) {}
+        }
     };
     
     this.synth.speak(utterance);
