@@ -13,7 +13,8 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: true, // Needed for Termux/Network access
-      port: 5173
+      port: 5173,
+      allowedHosts: ['nexus-voice.onrender.com']
     }
   }
 })
