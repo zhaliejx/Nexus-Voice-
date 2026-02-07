@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    
+    <!-- PWA Settings -->
+    <title>NexusAI</title>
+    <meta name="description" content="NexusAI - Cyberpunk Voice Agent" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="NexusAI" />
+    
+    <!-- Icons -->
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="logo.svg" />
+    <link rel="apple-touch-icon" href="logo.svg" />
+
+    <!-- Tailwind CSS CDN (Fastest way for Termux usage without setting up postcss locally) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+      :root {
+        --cyber-black: #050505;
+        --cyber-dark-grey: #111111;
+        --cyber-grey: #2a2a2a;
+        --cyber-white: #ffffff;
+        --cyber-neon: #00f0ff; /* Cyberpunk Cyan */
+      }
+      
+      body {
+        background-color: var(--cyber-black);
+        color: var(--cyber-white);
+        font-family: 'Courier New', Courier, monospace;
+        overscroll-behavior: none; /* Prevent bounce on mobile */
+      }
+
+      /* Cyberpunk Grid Background */
+      .bg-grid {
+        background-size: 40px 40px;
+        background-image: 
+          linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: -1;
+      }
+
+      /* Subtle vignette */
+      .vignette {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle, transparent 40%, #000000 100%);
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* Scanline effect */
+      .scanlines {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+        background-size: 100% 4px;
+        pointer-events: none;
+        z-index: 50;
+        opacity: 0.3;
+      }
+      
+      /* Utility for glass panels */
+      .glass-panel {
+        background: rgba(10, 10, 10, 0.7);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+      }
+
+      .text-glow {
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+      }
+      
+      .text-glow-cyan {
+        text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.40.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.3"
+  }
+}
+</script>
+</head>
+  <body class="bg-black text-white antialiased overflow-hidden selection:bg-cyan-500/30">
+    <div class="bg-grid"></div>
+    <div class="vignette"></div>
+    <div class="scanlines"></div>
+    
+    <div id="root" class="h-screen w-screen flex flex-col relative z-10"></div>
+    
+    <!-- Main Entry Point for Vite -->
+    <script type="module" src="/index.tsx"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('SW Registered'))
+            .catch(err => console.log('SW Fail', err));
+        });
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "name": "Nexus Voice Agent",
+  "description": "A dual-mode application: A live demonstration of a Gemini-powered voice assistant and a detailed architectural blueprint for building a Python-based mobile agent.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
